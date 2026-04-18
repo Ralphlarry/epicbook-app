@@ -6,35 +6,87 @@ trigger:
       - main
 
 stages:
-  - stage: DeployApp
-    displayName: "Deploy Application Code via Ansible"
-    jobs:
-      - job: App_Deployment
-        displayName: "Run Ansible Playbook to Deploy App"
-        pool:
-          name: "Self-hosted-pool-3"
+- stage: DeployApp
+  displayName: "Deploy Application via Ansible"
 
-        steps:
-          - script: |
-              sudo apt update
-              sudo apt install -y ansible sshpass
-            displayName: "Install Ansible & SSH dependencies"
+  jobs:
+  - job: App_Deployment
+    displayName: "Run Ansible Playbook"
+    timeoutInMinutes: 60
 
-          - task: DownloadSecureFile@1
-            name: download_ssh_key
-            inputs:
-              secureFile: "id_rsa"
+    pool:
+      name: "Self-hosted-pool-3"
 
-          - script: |
-              mkdir -p ~/.ssh
-              cp $(download_ssh_key.secureFilePath) ~/.ssh/id_rsa
-              chmod 600 ~/.ssh/id_rsa
-              echo "StrictHostKeyChecking no" > ~/.ssh/config
-            displayName: "Setup SSH Private Key"
+    steps:
 
-          - script: |
-              cd ansible
-              ansible-playbook -i inventory.ini site.yml --ssh-extra-args "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-            displayName: "Run Ansible Playbook"
-            env:
-              ANSIBLE_HOST_KEY_CHECKING: "False"
+    # 1. Ensure required tools exist (idempotent install)
+    - script: |
+        set -e
+
+        if ! command -v ansible >/dev/null 2>&1; then
+          echo "Installing Ansible..."
+          sudo apt update
+          sudo apt install -y ansible sshpass
+        else
+          echo "Ansible already installed"
+          ansible --version
+        fi
+      displayName: "Ensure Ansible Installed"
+
+    # 2. Download private SSH key securely
+    - task: DownloadSecureFile@1
+      name: download_private_key
+      inputs:
+        secureFile: "id_rsa"
+
+    # 3. Configure SSH environment
+    - script: |
+        set -e
+
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+
+        cp $(download_private_key.secureFilePath) ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+        # Disable host key checking cleanly
+        cat <<EOF > ~/.ssh/config
+        Host *
+          StrictHostKeyChecking no
+          UserKnownHostsFile=/dev/null
+        EOF
+
+        echo "SSH setup complete"
+      displayName: "Configure SSH"
+
+    # 4. Validate SSH connectivity BEFORE running Ansible
+    - script: |
+        set -e
+
+        echo "Testing SSH connectivity..."
+
+        while read host; do
+          echo "Checking $host..."
+          ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 azureuser@$host "echo Connected to $host"
+        done < ansible/hosts.txt
+
+        echo "All hosts reachable"
+      displayName: "Pre-check SSH Connectivity"
+
+    # 5. Run Ansible Playbook (strict + explicit)
+    - script: |
+        set -e
+
+        cd ansible
+
+        ansible-playbook \
+          -i inventory.ini site.yml \
+          --private-key ~/.ssh/id_rsa \
+          -u azureuser \
+          --forks 5 \
+          -vv
+      displayName: "Run Ansible Playbook"
+
+      env:
+        ANSIBLE_HOST_KEY_CHECKING: "False"
+        ANSIBLE_RETRY_FILES_ENABLED: "False"
