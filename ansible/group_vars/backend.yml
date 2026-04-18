@@ -1,0 +1,8 @@
+backend_repo_url: "https://github.com/Ralphlarry/book-review-app.git"
+backend_app_port: 3001
+db_host: "epicbook-db.mysql.database.azure.com"
+db_user: "mysqladmin"
+db_password: "Arigidi1994"
+db_name: "epicbook_dev"
+jwt_secret: "Awonrinoguhor"
+allowed_origins: "http://20.92.247.60:3000"

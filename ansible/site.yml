@@ -1,0 +1,17 @@
+- name: Common configuration for all servers
+  hosts: all
+  become: true
+  roles:
+    - common
+
+- name: Setup Backend
+  hosts: backend
+  become: true
+  roles:
+    - backend
+
+- name: Setup Frontend
+  hosts: frontend
+  become: true
+  roles:
+    - frontend
