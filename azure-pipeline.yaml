@@ -63,12 +63,16 @@ stages:
     - script: |
         set -e
 
-        echo "Testing SSH connectivity..."
+        echo "Testing SSH connectivity from inventory..."
 
-        while read host; do
+        cd ansible
+
+        HOSTS=$(awk '/^[0-9]+\./ {print $1}' inventory.ini)
+
+        for host in $HOSTS; do
           echo "Checking $host..."
           ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 azureuser@$host "echo Connected to $host"
-        done < ansible/hosts.txt
+        done
 
         echo "All hosts reachable"
       displayName: "Pre-check SSH Connectivity"
