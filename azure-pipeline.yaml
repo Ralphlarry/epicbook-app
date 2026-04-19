@@ -23,23 +23,23 @@ stages:
           - task: DownloadSecureFile@1
             name: download_private_key
             inputs:
-              secureFile: "id_rsa"
+              secureFile: "epicbook_key"
 
           - script: |
               mkdir -p ~/.ssh
-              cp $(download_private_key.secureFilePath) ~/.ssh/id_rsa
-              chmod 600 ~/.ssh/id_rsa
+              cp $(download_private_key.secureFilePath) ~/.ssh/epicbook_key
+              chmod 600 ~/.ssh/epicbook_key
               echo "StrictHostKeyChecking no" > ~/.ssh/config
             displayName: "Setup SSH Private Key"
 
           - script: |
               echo "Validating SSH key..."
 
-              file ~/.ssh/id_rsa
-              head -n 2 ~/.ssh/id_rsa
-              tail -n 2 ~/.ssh/id_rsa
+              file ~/.ssh/epicbook_key
+              head -n 2 ~/.ssh/epicbook_key
+              tail -n 2 ~/.ssh/epicbook_key
 
-              ssh-keygen -l -f ~/.ssh/id_rsa
+              ssh-keygen -l -f ~/.ssh/epicbook_key
             displayName: "Validate SSH Key"
           
           - script: |
