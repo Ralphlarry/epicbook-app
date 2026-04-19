@@ -33,6 +33,16 @@ stages:
             displayName: "Setup SSH Private Key"
 
           - script: |
+              echo "Validating SSH key..."
+
+              file ~/.ssh/id_rsa
+              head -n 2 ~/.ssh/id_rsa
+              tail -n 2 ~/.ssh/id_rsa
+
+              ssh-keygen -l -f ~/.ssh/id_rsa
+            displayName: "Validate SSH Key"
+          
+          - script: |
               cd ansible
               ansible-playbook -i inventory.ini site.yml --ssh-extra-args "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
             displayName: "Run Ansible Playbook"
